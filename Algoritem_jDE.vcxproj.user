@@ -4,6 +4,6 @@
     <LocalDebuggerEnvironment>
     </LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>-seed 43 -target -5.6104 -nfesLmt 1000000 -runtimeLmt 3600 -Np 300</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>ABBBBBBABBBAB -seed 23 -target -5.6104 -nfesLmt 1000000 -runtimeLmt 3600 -Np 300</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>
