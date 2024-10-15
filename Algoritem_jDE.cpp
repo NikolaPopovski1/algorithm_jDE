@@ -1,14 +1,18 @@
 #include <iostream>
 #include <string>
-#include <cstdlib>
 #include <vector>
 #include <utility>
 #include <chrono>
+#include <cmath>
+#include <tuple>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // Constants
-const double PI = 3.141592653589793;
-const double XjL = -PI;
-const double XjU = PI;
+const double XjL = -M_PI;
+const double XjU = M_PI;
 const double epsilon = 1e-6;
 
 struct Solution {
@@ -19,18 +23,68 @@ struct Solution {
     double Cr;
 };
 
-double energyCalculation(char aminoacid, Solution element) {
-    return energyOne(element.xThetas) + energyTwo(aminoacid, element);
+double energyCalculation(std::string aminoacids, Solution element) {
+    return energyOne(element.xThetas) + energyTwo(aminoacids, element);
 }
-
 double energyOne(std::vector<double> elementThetas) {
-
+    double result = 0.0;
+    for (int i = 0; i < elementThetas.size(); i++) {
+        result += (1 - cos(elementThetas[i]));
+    }
+    return (1 / 4) * result;
+}
+double energyTwo(std::string aminoacids, Solution element) {
+    double result = 0.0;
+    for (int i = 0; i < element.xThetas.size(); i++) {
+        for (int j = i + 2; j < element.xThetas.size() + 2; j++) {
+            result = 
+                powerOf(1 / distance(coordinate(element, i), coordinate(element, j)), 12)
+                - c(aminoacids[i], aminoacids[j])
+                * powerOf(1 / distance(coordinate(element, i), coordinate(element, j)), 6)
+                ; // ------ in debug, check if I get a proper value -----------
+        }
+    }
+    return (1 / 4) * result;
 }
 
-double energyTwo(char aminoacid, Solution element) {
-
+double distance(std::tuple<double, double, double> ri, std::tuple<double, double, double> rj) {
+    return sqrt(
+        (std::get<0>(rj) - std::get<0>(ri)) * (std::get<0>(rj) - std::get<0>(ri)) +
+        (std::get<1>(rj) - std::get<1>(ri)) * (std::get<1>(rj) - std::get<1>(ri)) +
+        (std::get<2>(rj) - std::get<2>(ri)) * (std::get<2>(rj) - std::get<2>(ri))
+    );
 }
 
+std::tuple<double, double, double> coordinate(Solution element, int i) { // ----------------------- if there is time, optimise so that Solution doesen't get copied as much --------------------------------------
+    if (i == 1) return std::make_tuple(0.0, 0.0, 0.0);
+    else if (i == 2) return std::make_tuple(0.0, 1.0, 0.0);
+    else if (i == 3) return std::make_tuple(cos(element.xThetas[0]), 1.0 + sin(element.xThetas[0]), 0.0);
+    else {
+        return std::make_tuple(
+            std::get<0>(coordinate(element, i - 1)) + cos(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
+            std::get<1>(coordinate(element, i - 1)) + sin(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
+            std::get<2>(coordinate(element, i - 1)) + sin(element.xBetas[i - 3])
+        );
+    }
+}
+
+double c(char aminoacidI, char aminoacidJ) {
+    if (aminoacidI == 'A' && aminoacidJ == 'A') return 1.0;
+    if (aminoacidI == 'B' && aminoacidJ == 'B') return 0.5;
+    if (aminoacidI != aminoacidJ) return -0.5;
+
+    throw std::runtime_error("Invalid amino acid pair: " + std::string(1, aminoacidI) + " and " + std::string(1, aminoacidJ));
+}
+
+
+
+double powerOf(double num, int pow) {
+    double result = 1.0;
+    for (int i = 0; i < pow; i++) {
+        result *= num;
+    }
+    return result;
+}
 
 int returnRandomIndex(int size, int i) {
     int returnIndex = i;
@@ -154,13 +208,23 @@ int main(int argc, char* argv[]) {
             for (int j = 0; j < aminoacids.size() - 2; i++) { // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
                 if (randValBetween0And1() < Cr || j == jRand) {
                     u.xThetas[j] = population[r3].xThetas[j] + F * (population[r1].xThetas[j] - population[r2].xThetas[j]);
-                    if (u.xThetas[j] <= -PI) u.xThetas[j] = 2 * PI + u.xThetas[j];
-                    if (u.xThetas[j] > PI) u.xThetas[j] = 2 * (-PI) + u.xThetas[j];
+                    if (u.xThetas[j] <= -M_PI) u.xThetas[j] = 2 * M_PI + u.xThetas[j];
+                    if (u.xThetas[j] > M_PI) u.xThetas[j] = 2 * (-M_PI) + u.xThetas[j];
                 }
                 else u.xThetas[j] = population[i].xThetas[j];
             }
+            // then go through for all betas
+            for (int j = 0; j < aminoacids.size() - 3; i++) { // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
+                if (randValBetween0And1() < Cr || j == jRand) {
+                    u.xBetas[j] = population[r3].xBetas[j] + F * (population[r1].xBetas[j] - population[r2].xBetas[j]);
+                    if (u.xBetas[j] <= -M_PI) u.xBetas[j] = 2 * M_PI + u.xBetas[j];
+                    if (u.xBetas[j] > M_PI) u.xBetas[j] = 2 * (-M_PI) + u.xBetas[j];
+                }
+                else u.xBetas[j] = population[i].xBetas[j];
+            }
 
-
+            u.energy = energyCalculation(aminoacids, u);
+            std::cout << "PLKS WORK BRO: " << u.energy << " ms" << std::endl;
         }
     }
     auto end = std::chrono::high_resolution_clock::now();
