@@ -5,17 +5,17 @@
 #include <chrono>
 #include <cmath>
 #include <tuple>
+#include <cfloat>
 
 #ifndef M_PI
 #define M_PI 3.1415926f
 #endif
 
-float powerOf(float num, int pow);
 
 // Constants
-const float XjL = -(float)M_PI;
-const float XjU = (float)M_PI;
-const float epsilon = (float)1e-6;
+constexpr const float XjL = -(float)M_PI;
+constexpr const float XjU = (float)M_PI;
+constexpr const float epsilon = (float)1e-6;
 
 struct Solution {
     std::vector<float> xThetas;
@@ -32,15 +32,15 @@ struct Coordinates {
     Coordinates(float xValue, float yValue, float zValue) : x(xValue), y(yValue), z(zValue) {}
 };
 
-Coordinates coordinate(Solution& element, int i) { // ----------------------- if there is time, optimise so that Solution doesen't get copied as much --------------------------------------
+Coordinates coordinate(std::vector<Coordinates>& allCoords, Solution& element, int i) { // ----------------------- if there is time, optimise so that Solution doesen't get copied as much --------------------------------------
     if (i == 0) return Coordinates(0.0f, 0.0f, 0.0f);
     else if (i == 1) return Coordinates(0.0f, 1.0f, 0.0f);
     else if (i == 2) return Coordinates(cos(element.xThetas[0]), 1.0f + sin(element.xThetas[0]), 0.0f);
-    else if (3 <= i <= element.xThetas.size() + 3) {
+    else if (3 <= i && i <= element.xThetas.size() + 3) {
         return Coordinates(
-            coordinate(element, i - 1).x + cos(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
-            coordinate(element, i - 1).y + sin(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
-            coordinate(element, i - 1).z + sin(element.xBetas[i - 3])
+            allCoords[i - 1].x + cos(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
+            allCoords[i - 1].y + sin(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
+            allCoords[i - 1].z + sin(element.xBetas[i - 3])
         );
     }
     else {
@@ -56,7 +56,7 @@ float distance(Coordinates& ri, Coordinates& rj) {
     return sqrt(first * first + second * second + third * third);
 }
 
-float c(char& aminoacidI, char& aminoacidJ) {
+constexpr float c(char& aminoacidI, char& aminoacidJ) {
     if (aminoacidI == 'A' && aminoacidJ == 'A') return 1.0f;
     if (aminoacidI == 'B' && aminoacidJ == 'B') return 0.5f;
     if (aminoacidI != aminoacidJ) return -0.5f;
@@ -65,19 +65,22 @@ float c(char& aminoacidI, char& aminoacidJ) {
 }
 
 float energyCalculation(std::string& aminoacids, Solution& element) {
-    float resultOne = 0.0;
+    float resultOne = 0.0f;
     for (int i = 0; i < element.xThetas.size(); i++) {
         resultOne += (1 - cos(element.xThetas[i]));
     }
     resultOne /= 4;
 
-    float resultTwo = 1.0;
+    std::vector<Coordinates> allCoords;
+    for (int i = 0; i < element.xThetas.size() + 2; i++) {
+        allCoords.push_back(coordinate(allCoords, element, i));
+    }
+
+    float resultTwo = 1.0f;
     for (int i = 0; i < element.xThetas.size(); i++) {
         for (int j = i + 2; j < element.xThetas.size() + 2; j++) {
             //std::cout << "-----" << element.xThetas.size() << "-----";
-            Coordinates coordI = coordinate(element, i);
-            Coordinates coordJ = coordinate(element, j);
-            float inv = distance(coordI, coordJ);
+            float inv = distance(allCoords[i], allCoords[j]);
             float inv2 = inv * inv;
             float inv3 = inv * inv2;
             float inv6 = 1 / (inv3 * inv3);
@@ -86,22 +89,22 @@ float energyCalculation(std::string& aminoacids, Solution& element) {
             resultTwo += inv12 - c(aminoacids[i], aminoacids[j]) * inv6; // ------ in debug, check if I get a proper value -----------
         }
     }
-    return resultTwo * 4;
+    return resultOne + resultTwo * 4;
 }
 
-int returnRandomIndex(int size, int i) {
+constexpr int returnRandomIndex(int size, int i) {
     int returnIndex = i;
     while (i == returnIndex) returnIndex = rand() % size;
     return returnIndex;
 }
 
-int returnRandomIndex(int size, int i, int r1) {
+constexpr int returnRandomIndex(int size, int i, int r1) {
     int returnIndex = i;
     while (i == returnIndex || i == r1) returnIndex = rand() % size;
     return returnIndex;
 }
 
-int returnRandomIndex(int size, int i, int r1, int r2) {
+constexpr int returnRandomIndex(int size, int i, int r1, int r2) {
     int returnIndex = i;
     while (i == returnIndex || i == r1 || i == r2) returnIndex = rand() % size;
     return returnIndex;
@@ -159,20 +162,20 @@ int main(int argc, char* argv[]) {
 
     // Initialisation
     std::cout << "Init:";
-    std::vector<Solution*> populationPrevGen;
-    std::vector<Solution*> populationCurrGen;
-    std::vector<Solution*> populationNextGen;
+    std::vector<Solution> populationPrevGen;
+    std::vector<Solution> populationCurrGen;
+    std::vector<Solution> populationNextGen;
     for (unsigned int i = 0; i < np; i++) {
-        Solution* sol = new Solution();
-        sol->F = 0.5f;
-        sol->Cr = 0.9f;
+        Solution sol = Solution();
+        sol.F = 0.5f;
+        sol.Cr = 0.9f;
 
-        sol->xThetas.push_back(randValBetween0And1() * (XjU - XjL) + XjL);
+        sol.xThetas.push_back(randValBetween0And1() * (XjU - XjL) + XjL);
         for (int j = 3; j < aminoacids.size(); j++) {
-            sol->xThetas.push_back(randValBetween0And1() * (XjU - XjL) + XjL);
-            sol->xBetas.push_back(randValBetween0And1() * (XjU - XjL) + XjL);
+            sol.xThetas.push_back(randValBetween0And1() * (XjU - XjL) + XjL);
+            sol.xBetas.push_back(randValBetween0And1() * (XjU - XjL) + XjL);
         }
-        sol->energy = energyCalculation(aminoacids, *sol);
+        sol.energy = energyCalculation(aminoacids, sol);
         populationPrevGen.push_back(sol);
         populationCurrGen.push_back(sol);
 
@@ -191,27 +194,27 @@ int main(int argc, char* argv[]) {
     auto now = std::chrono::high_resolution_clock::now();
     auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
 
-    float bestEnergy = 0.0f;
+    float bestEnergy = FLT_MAX;
     bool finished = true;
     float F = 0.5f;
     float Cr = 0.9f;
-    while (elapsed_ms <= runtimeLmt || nfesCounter <= nfesLmt || finished) {
+    while (elapsed_ms <= runtimeLmt && nfesCounter <= nfesLmt && finished) {
         now = std::chrono::high_resolution_clock::now();
         elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-        std::cout << "\n";
+        std::cout << nfesLmt - nfesCounter << "\n";
 
         for (unsigned int i = 0; i < np; i++) {
-            Solution* u = new Solution();
+            Solution u = Solution();
             float randomValue = randValBetween0And1();
 
             // Mutation
-            if (randomValue < 0.1) populationCurrGen[i]->F = 0.1f + 0.9f * randomValue;
-            else populationCurrGen[i]->F = F;
+            if (randomValue < 0.1) populationCurrGen[i].F = 0.1f + 0.9f * randomValue;
+            else populationCurrGen[i].F = F;
 
             // Crossing
             randomValue = randValBetween0And1();
-            if (randomValue < 0.1) populationCurrGen[i]->Cr = randomValue;
-            else populationCurrGen[i]->Cr = Cr;
+            if (randomValue < 0.1) populationCurrGen[i].Cr = randomValue;
+            else populationCurrGen[i].Cr = Cr;
 
 
             // Part of mutation
@@ -220,11 +223,11 @@ int main(int argc, char* argv[]) {
             int r2 = returnRandomIndex(np, i, r1);
             // int r3 = returnRandomIndex(np, i, r1, r2); // -------------------------------------------------------------- možno, da bi moral tu vzeti best namesto r3--------------------------------------------------------------
             int rBest = 0;
-            float tmp = populationCurrGen[0]->energy;
+            float tmp = populationCurrGen[0].energy;
             for (int i = 1; i < populationCurrGen.size(); i++) {
-                if (tmp > populationCurrGen[i]->energy) {
+                if (tmp > populationCurrGen[i].energy) {
                     rBest = i;
-                    tmp = populationCurrGen[i]->energy;
+                    tmp = populationCurrGen[i].energy;
                 }
             }
 
@@ -235,50 +238,49 @@ int main(int argc, char* argv[]) {
             // first go through for all thetas
             for (int j = 0; j < aminoacids.size() - 2; j++) { // -------------------------------------------------------------- možno, da D ni pravilen, mozno tud da implementacija ni pravilna in da bi moral implementirat  --------------------------------------------------------------
                 if (randValBetween0And1() < Cr || j == jRand) {
-                    u->xThetas.push_back(populationCurrGen[rBest]->xThetas[j] + F * (populationCurrGen[r1]->xThetas[j] - populationCurrGen[r2]->xThetas[j]));
-                    if (u->xThetas[j] <= -M_PI) u->xThetas[j] = 2 * M_PI + u->xThetas[j];
-                    if (u->xThetas[j] > M_PI) u->xThetas[j] = 2 * (-M_PI) + u->xThetas[j];
+                    u.xThetas.push_back(populationCurrGen[rBest].xThetas[j] + F * (populationCurrGen[r1].xThetas[j] - populationCurrGen[r2].xThetas[j]));
+                    if (u.xThetas[j] <= -M_PI) u.xThetas[j] = 2 * M_PI + u.xThetas[j];
+                    if (u.xThetas[j] > M_PI) u.xThetas[j] = 2 * (-M_PI) + u.xThetas[j];
                 }
-                else u->xThetas.push_back(populationCurrGen[i]->xThetas[j]);
+                else u.xThetas.push_back(populationCurrGen[i].xThetas[j]);
             }
             // then go through for all betas
             for (int j = 0; j < aminoacids.size() - 3; j++) { // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
                 if (randValBetween0And1() < Cr || j == jRand) {
-                    u->xBetas.push_back(populationCurrGen[rBest]->xBetas[j] + F * (populationCurrGen[r1]->xBetas[j] - populationCurrGen[r2]->xBetas[j]));
-                    if (u->xBetas[j] <= -M_PI) u->xBetas[j] = 2 * M_PI + u->xBetas[j];
-                    if (u->xBetas[j] > M_PI) u->xBetas[j] = 2 * (-M_PI) + u->xBetas[j];
+                    u.xBetas.push_back(populationCurrGen[rBest].xBetas[j] + F * (populationCurrGen[r1].xBetas[j] - populationCurrGen[r2].xBetas[j]));
+                    if (u.xBetas[j] <= -M_PI) u.xBetas[j] = 2 * M_PI + u.xBetas[j];
+                    if (u.xBetas[j] > M_PI) u.xBetas[j] = 2 * (-M_PI) + u.xBetas[j];
                 }
-                else u->xBetas.push_back(populationCurrGen[i]->xBetas[j]);
+                else u.xBetas.push_back(populationCurrGen[i].xBetas[j]);
             }
 
-            u->energy = energyCalculation(aminoacids, *u);
+            u.energy = energyCalculation(aminoacids, u);
             nfesCounter++;
 
             // Selection
-            Solution* newU = new Solution();
-            if (u->energy < populationCurrGen[i]->energy) {
-                newU->Cr = populationCurrGen[i]->Cr;
-                newU->F = populationCurrGen[i]->F;
-                newU->xThetas = u->xThetas;
-                newU->xBetas = u->xBetas;
+            Solution newU = Solution();
+            if (u.energy < populationCurrGen[i].energy) {
+                newU.Cr = populationCurrGen[i].Cr;
+                newU.F = populationCurrGen[i].F;
+                newU.xThetas = u.xThetas;
+                newU.xBetas = u.xBetas;
             }
             else {
                 if (i == 0) {
-                    newU->Cr = populationCurrGen[i]->Cr;
-                    newU->F = populationCurrGen[i]->F;
+                    newU.Cr = populationCurrGen[i].Cr;
+                    newU.F = populationCurrGen[i].F;
                 }
                 else {
-                    newU->Cr = populationPrevGen[i]->Cr;
-                    newU->F = populationPrevGen[i]->F;
+                    newU.Cr = populationPrevGen[i].Cr;
+                    newU.F = populationPrevGen[i].F;
                 }
-                newU->xThetas = populationCurrGen[i]->xThetas;
-                newU->xBetas = populationCurrGen[i]->xBetas;
+                newU.xThetas = populationCurrGen[i].xThetas;
+                newU.xBetas = populationCurrGen[i].xBetas;
             }
             populationNextGen.push_back(newU);
 
-            std::cout << ".";
-            if (target - 0.000001f < u->energy < target + 0.000001f) finished = false;
-            delete u;
+            if (target - epsilon < u.energy < target + epsilon) finished = false;
+            //delete u;
         }
 
         // Check if the target energy (+- epsilon) has been reached, if so then end the while loop
@@ -292,13 +294,13 @@ int main(int argc, char* argv[]) {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "Time taken: " << duration << " ms" << '\n';
     std::cout << "Best energy: " << bestEnergy << '\n';
-
-    for (int i = 0; i < populationCurrGen.size(); i++) {
-        delete populationCurrGen[i];
-    }
-    for (int i = 0; i < populationNextGen.size(); i++) {
-        delete populationCurrGen[i];
-    }
-
+    /*
+        for (int i = 0; i < populationCurrGen.size(); i++) {
+            delete populationCurrGen[i];
+        }
+        for (int i = 0; i < populationNextGen.size(); i++) {
+            delete populationCurrGen[i];
+        }
+    */
     return 0;
 }
