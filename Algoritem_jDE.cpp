@@ -26,13 +26,13 @@ struct Solution {
 };
 
 struct Coordinates {
-    float x,y,z;
+    float x, y, z;
 
     Coordinates() {}
     Coordinates(float xValue, float yValue, float zValue) : x(xValue), y(yValue), z(zValue) {}
 };
 
-Coordinates coordinate(Solution &element, int i) { // ----------------------- if there is time, optimise so that Solution doesen't get copied as much --------------------------------------
+Coordinates coordinate(Solution& element, int i) { // ----------------------- if there is time, optimise so that Solution doesen't get copied as much --------------------------------------
     if (i == 0) return Coordinates(0.0f, 0.0f, 0.0f);
     else if (i == 1) return Coordinates(0.0f, 1.0f, 0.0f);
     else if (i == 2) return Coordinates(cos(element.xThetas[0]), 1.0f + sin(element.xThetas[0]), 0.0f);
@@ -49,14 +49,14 @@ Coordinates coordinate(Solution &element, int i) { // ----------------------- if
     }
 }
 
-float distance(Coordinates &ri, Coordinates &rj) {
+float distance(Coordinates& ri, Coordinates& rj) {
     float first = rj.x - ri.x;
     float second = rj.y - ri.y;
     float third = rj.z - ri.z;
     return sqrt(first * first + second * second + third * third);
 }
 
-float c(char &aminoacidI, char &aminoacidJ) {
+float c(char& aminoacidI, char& aminoacidJ) {
     if (aminoacidI == 'A' && aminoacidJ == 'A') return 1.0f;
     if (aminoacidI == 'B' && aminoacidJ == 'B') return 0.5f;
     if (aminoacidI != aminoacidJ) return -0.5f;
@@ -64,7 +64,7 @@ float c(char &aminoacidI, char &aminoacidJ) {
     throw std::runtime_error("Invalid amino acid pair: " + std::string(1, aminoacidI) + " and " + std::string(1, aminoacidJ));
 }
 
-float energyCalculation(std::string &aminoacids, Solution &element) {
+float energyCalculation(std::string& aminoacids, Solution& element) {
     float resultOne = 0.0;
     for (int i = 0; i < element.xThetas.size(); i++) {
         resultOne += (1 - cos(element.xThetas[i]));
@@ -86,7 +86,6 @@ float energyCalculation(std::string &aminoacids, Solution &element) {
             resultTwo += inv12 - c(aminoacids[i], aminoacids[j]) * inv6; // ------ in debug, check if I get a proper value -----------
         }
     }
-    std::cout << '\n';
     return resultTwo * 4;
 }
 
@@ -159,9 +158,12 @@ int main(int argc, char* argv[]) {
     srand(seed);
 
     // Initialisation
-    std::vector<Solution*> population;
+    std::cout << "Init:";
+    std::vector<Solution*> populationPrevGen;
+    std::vector<Solution*> populationCurrGen;
+    std::vector<Solution*> populationNextGen;
     for (unsigned int i = 0; i < np; i++) {
-        Solution *sol = new Solution();
+        Solution* sol = new Solution();
         sol->F = 0.5f;
         sol->Cr = 0.9f;
 
@@ -171,34 +173,45 @@ int main(int argc, char* argv[]) {
             sol->xBetas.push_back(randValBetween0And1() * (XjU - XjL) + XjL);
         }
         sol->energy = energyCalculation(aminoacids, *sol);
-        population.push_back(sol);
+        populationPrevGen.push_back(sol);
+        populationCurrGen.push_back(sol);
+
+        std::cout << ".";
     }
+
+    std::cout << "\nInit finished.";
 
     // Initialisation is properly done (probably, maybe there is a few semantical problems)
 
-    // std::cout << population[3].xBetas.size() << "\n" << population[3].xThetas.size();
+    // std::cout << populationCurrGen[3].xBetas.size() << "\n" << populationCurrGen[3].xThetas.size();
+
+    std::cout << "\nStarting algorithm:";
 
     auto start = std::chrono::high_resolution_clock::now();
     auto now = std::chrono::high_resolution_clock::now();
     auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+
+    float bestEnergy = 0.0f;
     bool finished = true;
-    while (elapsed_ms >= runtimeLmt || nfesCounter >= nfesLmt || finished) {
+    float F = 0.5f;
+    float Cr = 0.9f;
+    while (elapsed_ms <= runtimeLmt || nfesCounter <= nfesLmt || finished) {
         now = std::chrono::high_resolution_clock::now();
         elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+        std::cout << "\n";
+
         for (unsigned int i = 0; i < np; i++) {
             Solution* u = new Solution();
             float randomValue = randValBetween0And1();
-            float F = 0.5f;
-            float Cr = 0.9f;
 
             // Mutation
-            if (randomValue < 0.1) population[i]->F = 0.1f + 0.9f * randomValue;
-            else population[i]->F = F;
-            
+            if (randomValue < 0.1) populationCurrGen[i]->F = 0.1f + 0.9f * randomValue;
+            else populationCurrGen[i]->F = F;
+
             // Crossing
             randomValue = randValBetween0And1();
-            if (randomValue < 0.1) population[i]->Cr = randomValue;
-            else population[i]->Cr = Cr;
+            if (randomValue < 0.1) populationCurrGen[i]->Cr = randomValue;
+            else populationCurrGen[i]->Cr = Cr;
 
 
             // Part of mutation
@@ -207,49 +220,84 @@ int main(int argc, char* argv[]) {
             int r2 = returnRandomIndex(np, i, r1);
             // int r3 = returnRandomIndex(np, i, r1, r2); // -------------------------------------------------------------- možno, da bi moral tu vzeti best namesto r3--------------------------------------------------------------
             int rBest = 0;
-            float tmp = population[0]->energy;
-            for (int i = 1; i < population.size(); i++) {
-                if (tmp > population[i]->energy) {
+            float tmp = populationCurrGen[0]->energy;
+            for (int i = 1; i < populationCurrGen.size(); i++) {
+                if (tmp > populationCurrGen[i]->energy) {
                     rBest = i;
-                    tmp = population[i]->energy;
+                    tmp = populationCurrGen[i]->energy;
                 }
             }
 
             // Part of crossing
             int jRand = rand() % aminoacids.size(); // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
-        
+
             // Part of crossing
             // first go through for all thetas
             for (int j = 0; j < aminoacids.size() - 2; j++) { // -------------------------------------------------------------- možno, da D ni pravilen, mozno tud da implementacija ni pravilna in da bi moral implementirat  --------------------------------------------------------------
                 if (randValBetween0And1() < Cr || j == jRand) {
-                    u->xThetas.push_back(population[rBest]->xThetas[j] + F * (population[r1]->xThetas[j] - population[r2]->xThetas[j]));
+                    u->xThetas.push_back(populationCurrGen[rBest]->xThetas[j] + F * (populationCurrGen[r1]->xThetas[j] - populationCurrGen[r2]->xThetas[j]));
                     if (u->xThetas[j] <= -M_PI) u->xThetas[j] = 2 * M_PI + u->xThetas[j];
                     if (u->xThetas[j] > M_PI) u->xThetas[j] = 2 * (-M_PI) + u->xThetas[j];
                 }
-                else u->xThetas.push_back(population[i]->xThetas[j]);
+                else u->xThetas.push_back(populationCurrGen[i]->xThetas[j]);
             }
             // then go through for all betas
             for (int j = 0; j < aminoacids.size() - 3; j++) { // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
                 if (randValBetween0And1() < Cr || j == jRand) {
-                    u->xBetas.push_back(population[rBest]->xBetas[j] + F * (population[r1]->xBetas[j] - population[r2]->xBetas[j]));
+                    u->xBetas.push_back(populationCurrGen[rBest]->xBetas[j] + F * (populationCurrGen[r1]->xBetas[j] - populationCurrGen[r2]->xBetas[j]));
                     if (u->xBetas[j] <= -M_PI) u->xBetas[j] = 2 * M_PI + u->xBetas[j];
                     if (u->xBetas[j] > M_PI) u->xBetas[j] = 2 * (-M_PI) + u->xBetas[j];
                 }
-                else u->xBetas.push_back(population[i]->xBetas[j]);
+                else u->xBetas.push_back(populationCurrGen[i]->xBetas[j]);
             }
 
             u->energy = energyCalculation(aminoacids, *u);
-            
+            nfesCounter++;
+
+            // Selection
+            Solution* newU = new Solution();
+            if (u->energy < populationCurrGen[i]->energy) {
+                newU->Cr = populationCurrGen[i]->Cr;
+                newU->F = populationCurrGen[i]->F;
+                newU->xThetas = u->xThetas;
+                newU->xBetas = u->xBetas;
+            }
+            else {
+                if (i == 0) {
+                    newU->Cr = populationCurrGen[i]->Cr;
+                    newU->F = populationCurrGen[i]->F;
+                }
+                else {
+                    newU->Cr = populationPrevGen[i]->Cr;
+                    newU->F = populationPrevGen[i]->F;
+                }
+                newU->xThetas = populationCurrGen[i]->xThetas;
+                newU->xBetas = populationCurrGen[i]->xBetas;
+            }
+            populationNextGen.push_back(newU);
+
+            std::cout << ".";
+            if (target - 0.000001f < u->energy < target + 0.000001f) finished = false;
             delete u;
         }
+
+        // Check if the target energy (+- epsilon) has been reached, if so then end the while loop
+
+        populationPrevGen = populationCurrGen;
+        populationCurrGen = populationNextGen;
+        populationNextGen.clear();
     }
     auto end = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "Time taken: " << duration << " ms" << '\n';
+    std::cout << "Best energy: " << bestEnergy << '\n';
 
-    for (int i = 0; i < population.size(); i++) {
-        delete population[i];
+    for (int i = 0; i < populationCurrGen.size(); i++) {
+        delete populationCurrGen[i];
+    }
+    for (int i = 0; i < populationNextGen.size(); i++) {
+        delete populationCurrGen[i];
     }
 
     return 0;
