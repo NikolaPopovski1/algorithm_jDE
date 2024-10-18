@@ -143,11 +143,11 @@ int main(int argc, char* argv[]) {
         else if (arg == "-runtimeLmt" && i + 1 < argc) {
             runtimeLmt = std::stoi(argv[++i]);
         }
-        else if (arg == "-Np" && i + 1 < argc) {
+        else if ((arg == "-Np" || arg == "-np") && i + 1 < argc) {
             np = std::stoi(argv[++i]);
         }
     }
-    /*
+/*
     // Print parsed values to check
     std::cout << "Input values:" << '\n';
     std::cout << "\tAminoacids: " << aminoacids << '\n';
@@ -156,7 +156,7 @@ int main(int argc, char* argv[]) {
     std::cout << "\tNfesLmt: " << nfesLmt << '\n'; // How many times the function for calculating energy can be called
     std::cout << "\tRuntimeLmt (ms): " << runtimeLmt << '\n'; // How much time the algorithm can run before it shuts down (900000 -> 15min)
     std::cout << "\tNp: " << np << '\n';
-    */
+*/
 
     // Example usage of seed (set the random seed)
     srand(seed);
@@ -211,10 +211,10 @@ int main(int argc, char* argv[]) {
             // int r3 = returnRandomIndex(np, i, r1, r2); // -------------------------------------------------------------- možno, da bi moral tu vzeti best namesto r3--------------------------------------------------------------
             int rBest = 0;
             float tmp = populationCurrGen[0].energy;
-            for (int i = 1; i < populationCurrGen.size(); i++) {
-                if (tmp > populationCurrGen[i].energy) {
-                    rBest = i;
-                    tmp = populationCurrGen[i].energy;
+            for (int j = 1; j < populationCurrGen.size(); j++) {
+                if (tmp > populationCurrGen[j].energy) {
+                    rBest = j;
+                    tmp = populationCurrGen[j].energy;
                 }
             }
             bestEnergy = rBest;
@@ -250,9 +250,10 @@ int main(int argc, char* argv[]) {
     auto end = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "Time taken: " << duration << " ms" << '\n';
-    std::cout << "Best energy: " << populationCurrGen[bestEnergy].energy << '\n';
-    std::cout << "Speed: " << nfesCounter/duration << '\n';
+    std::cout << populationCurrGen[bestEnergy].energy << '\n';
+    std::cout << nfesCounter << '\n';
+    std::cout << duration << '\n';
+    //std::cout << "Speed (nfes / duration = speed): " << nfesCounter << " / " << duration << " = " << nfesCounter/duration << '\n';
 
     return 0;
 }
