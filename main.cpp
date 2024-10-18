@@ -38,9 +38,9 @@ Coordinates coordinate(std::vector<Coordinates>& allCoords, Solution& element, i
     else if (i == 2) return Coordinates(cos(element.xThetas[0]), 1.0f + sin(element.xThetas[0]), 0.0f);
     else if (3 <= i && i <= element.xThetas.size() + 3) {
         return Coordinates(
-            allCoords[i - 1].x + cos(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
-            allCoords[i - 1].y + sin(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
-            allCoords[i - 1].z + sin(element.xBetas[i - 3])
+                allCoords[i - 1].x + cos(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
+                allCoords[i - 1].y + sin(element.xThetas[i - 2]) * cos(element.xBetas[i - 3]),
+                allCoords[i - 1].z + sin(element.xBetas[i - 3])
         );
     }
     else {
@@ -147,7 +147,7 @@ int main(int argc, char* argv[]) {
             np = std::stoi(argv[++i]);
         }
     }
-
+    /*
     // Print parsed values to check
     std::cout << "Input values:" << '\n';
     std::cout << "\tAminoacids: " << aminoacids << '\n';
@@ -156,19 +156,18 @@ int main(int argc, char* argv[]) {
     std::cout << "\tNfesLmt: " << nfesLmt << '\n'; // How many times the function for calculating energy can be called
     std::cout << "\tRuntimeLmt (ms): " << runtimeLmt << '\n'; // How much time the algorithm can run before it shuts down (900000 -> 15min)
     std::cout << "\tNp: " << np << '\n';
+    */
 
     // Example usage of seed (set the random seed)
     srand(seed);
 
     // Initialisation
-    std::cout << "Init:";
     std::vector<Solution> populationCurrGen;
     for (unsigned int i = 0; i < np; i++) {
         Solution sol = Solution();
         sol.F = 0.5f;
         sol.Cr = 0.9f;
 
-        //sol.xThetas.push_back(randValBetween0And1() * (XjU - XjL) + XjL);
         sol.xThetas.push_back(XjL + 2 * XjU * randValBetween0And1());
         for (int j = 3; j < aminoacids.size(); j++) {
             sol.xThetas.push_back(XjL + 2 * XjU * randValBetween0And1());
@@ -177,17 +176,7 @@ int main(int argc, char* argv[]) {
         sol.energy = energyCalculation(aminoacids, sol);
 
         populationCurrGen.push_back(sol);
-
-        std::cout << ".";
     }
-
-    std::cout << "\nInit finished.";
-
-    // Initialisation is properly done (probably, maybe there is a few semantical problems)
-
-    // std::cout << populationCurrGen[3].xBetas.size() << "\n" << populationCurrGen[3].xThetas.size();
-
-    std::cout << "\nStarting algorithm:";
 
     auto start = std::chrono::high_resolution_clock::now();
     auto now = std::chrono::high_resolution_clock::now();
@@ -200,7 +189,6 @@ int main(int argc, char* argv[]) {
     while (elapsed_ms <= runtimeLmt && nfesCounter <= nfesLmt && finished) {
         now = std::chrono::high_resolution_clock::now();
         elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-        std::cout << nfesLmt - nfesCounter << "\n";
 
         for (unsigned int i = 0; i < np; i++) {
             Solution u = Solution();
@@ -220,7 +208,7 @@ int main(int argc, char* argv[]) {
             // indexes are done properly
             int r1 = returnRandomIndex(np, i);
             int r2 = returnRandomIndex(np, i, r1);
-            // int r3 = returnRandomIndex(np, i, r1, r2); // -------------------------------------------------------------- možno, da bi moral tu vzeti best namesto r3--------------------------------------------------------------
+            // int r3 = returnRandomIndex(np, i, r1, r2); // -------------------------------------------------------------- moÅ¾no, da bi moral tu vzeti best namesto r3--------------------------------------------------------------
             int rBest = 0;
             float tmp = populationCurrGen[0].energy;
             for (int i = 1; i < populationCurrGen.size(); i++) {
@@ -234,18 +222,18 @@ int main(int argc, char* argv[]) {
             // Selection
             // & part of crossing
 
-            int jRand = rand() % aminoacids.size(); // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
+            int jRand = rand() % aminoacids.size(); // -------------------------------------------------------------- moÅ¾no, da D ni pravilen --------------------------------------------------------------
             // first go through for all thetas
-            for (int j = 0; j < aminoacids.size() - 2; j++) { // -------------------------------------------------------------- možno, da D ni pravilen, mozno tud da implementacija ni pravilna in da bi moral implementirat  --------------------------------------------------------------
+            for (int j = 0; j < aminoacids.size() - 2; j++) { // -------------------------------------------------------------- moÅ¾no, da D ni pravilen, mozno tud da implementacija ni pravilna in da bi moral implementirat  --------------------------------------------------------------
                 if (randValBetween0And1() < Cr || j == jRand) {
-                    u.xThetas.push_back(populationCurrGen[rBest].xThetas[j] + F * (populationCurrGen[r1].xThetas[j] - populationCurrGen[r2].xThetas[j])); // Ali je tu xb,j v psevdokodi mišljen x best?
+                    u.xThetas.push_back(populationCurrGen[rBest].xThetas[j] + F * (populationCurrGen[r1].xThetas[j] - populationCurrGen[r2].xThetas[j])); // Ali je tu xb,j v psevdokodi miÅ¡ljen x best?
                     if (u.xThetas[j] <= XjL) u.xThetas[j] = 2 * XjL + u.xThetas[j];
                     if (u.xThetas[j] > XjU) u.xThetas[j] = 2 * XjU + u.xThetas[j];
                 }
                 else u.xThetas.push_back(populationCurrGen[i].xThetas[j]);
             }
             // then go through for all betas
-            for (int j = 0; j < aminoacids.size() - 3; j++) { // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
+            for (int j = 0; j < aminoacids.size() - 3; j++) { // -------------------------------------------------------------- moÅ¾no, da D ni pravilen --------------------------------------------------------------
                 if (randValBetween0And1() < Cr || j == jRand) {
                     u.xBetas.push_back(populationCurrGen[rBest].xBetas[j] + F * (populationCurrGen[r1].xBetas[j] - populationCurrGen[r2].xBetas[j]));
                     if (u.xBetas[j] <= XjL) u.xBetas[j] = 2 * XjL + u.xBetas[j];
@@ -253,28 +241,18 @@ int main(int argc, char* argv[]) {
                 }
                 else u.xBetas.push_back(populationCurrGen[i].xBetas[j]);
             }
-
             u.energy = energyCalculation(aminoacids, u);
             nfesCounter++;
 
             if (target - epsilon < u.energy < target + epsilon) finished = false;
-            //delete u;
         }
-
-        // Check if the target energy (+- epsilon) has been reached, if so then end the while loop
     }
     auto end = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "Time taken: " << duration << " ms" << '\n';
     std::cout << "Best energy: " << populationCurrGen[bestEnergy].energy << '\n';
-    /*
-        for (int i = 0; i < populationCurrGen.size(); i++) {
-            delete populationCurrGen[i];
-        }
-        for (int i = 0; i < populationNextGen.size(); i++) {
-            delete populationCurrGen[i];
-        }
-    */
+    std::cout << "Speed: " << nfesCounter/duration << '\n';
+
     return 0;
 }
