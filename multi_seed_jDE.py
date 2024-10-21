@@ -8,7 +8,7 @@ nfes_list = []
 
 # Run the program for 50 seeds
 for seed in range(1, 51):
-    result = subprocess.run([f'.\\a.exe', "ABBBBBBABBBAB", "-seed", str(seed), "-target", "-5.6104", 
+    result = subprocess.run([f'.\\3.exe', "ABBBBBBABBBAB", "-seed", str(seed), "-target", "-5.6104", 
                              "-nfesLmt", "1000000", "-Np", "300", "-runtimeLmt", "3600"], capture_output=True, text=True)
     
     # Extract the values by splitting the output

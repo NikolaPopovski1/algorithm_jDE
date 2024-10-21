@@ -153,7 +153,6 @@ int main(int argc, char* argv[]) {
     std::cout << "\tNp: " << np << '\n';
 */
 
-
     int bestEnergy = 0;
     float F = 0.5f;
     float Cr = 0.9f;
@@ -166,9 +165,10 @@ int main(int argc, char* argv[]) {
     srand(seed);
 
     // Initialisation
+    Solution sol;
     std::vector<Solution> populationCurrGen;
     for (unsigned int i = 0; i < np; i++) {
-        Solution sol = Solution();
+        sol = Solution();
         sol.F = 0.5f;
         sol.Cr = 0.9f;
 
@@ -177,18 +177,25 @@ int main(int argc, char* argv[]) {
             sol.xThetas.push_back(XjL + 2 * XjU * ((float)rand() / (RAND_MAX + 1) + (rand() % 1)));
             sol.xBetas.push_back(XjL + 2 * XjU * ((float)rand() / (RAND_MAX + 1) + (rand() % 1)));
         }
+        /*
+        sol.xThetas = {0.7556,  0.0503, -0.8505,  0.0011,  0.2203,  1.1535, -0.1118,  0.1564,    0.1536,  0.0390,  1.2929};
+        sol.xBetas = { -0.1156,  0.0230, -1.8169,  2.7985, -3.0959,  -0.3611,  0.4678,  2.2303,  2.9020,  0.1797};
+        */
         sol.energy = energyCalculation(aminoacids, sol);
         nfesCounter++;
 
         populationCurrGen.push_back(sol);
     }
 
+    Solution u, uNew;
+    int r1, r2, r3, rBest, jRand;
+    float tmp;
     while (elapsed_ms <= runtimeLmt && nfesCounter <= nfesLmt) {
         now = std::chrono::high_resolution_clock::now();
         elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
 
         for (unsigned int i = 0; i < np; i++) {
-            Solution u = Solution();
+            u = Solution();
 
             // Mutation
             float randomValue = (float)rand() / (RAND_MAX + 1) + (rand() % 1);
@@ -203,11 +210,11 @@ int main(int argc, char* argv[]) {
 
             // Part of mutation
             // indexes are done properly
-            int r1 = returnRandomIndex(np, i);
-            int r2 = returnRandomIndex(np, i, r1);
-            int r3 = returnRandomIndex(np, i, r1, r2); // -------------------------------------------------------------- možno, da bi moral tu vzeti best namesto r3--------------------------------------------------------------
-            int rBest = 0;
-            float tmp = populationCurrGen[0].energy;
+            r1 = returnRandomIndex(np, i);
+            r2 = returnRandomIndex(np, i, r1);
+            r3 = returnRandomIndex(np, i, r1, r2); // -------------------------------------------------------------- možno, da bi moral tu vzeti best namesto r3--------------------------------------------------------------
+            rBest = 0;
+            tmp = populationCurrGen[0].energy;
             for (int j = 1; j < populationCurrGen.size(); j++) {
                 if (tmp > populationCurrGen[j].energy) {
                     rBest = j;
@@ -219,29 +226,59 @@ int main(int argc, char* argv[]) {
             // Selection
             // & part of crossing
 
-            int jRand = rand() % aminoacids.size(); // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
+            jRand = rand() % aminoacids.size(); // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
             // first go through for all thetas
             for (int j = 0; j < aminoacids.size() - 2; j++) { // -------------------------------------------------------------- možno, da D ni pravilen, mozno tud da implementacija ni pravilna in da bi moral implementirat  --------------------------------------------------------------
                 if (((float)rand() / (RAND_MAX + 1) + (rand() % 1)) < Cr || j == jRand) {
-                    u.xThetas.push_back(populationCurrGen[rBest].xThetas[j] + F * (populationCurrGen[r1].xThetas[j] - populationCurrGen[r2].xThetas[j])); // Ali je tu xb,j v psevdokodi mišljen x best?
-                    if (u.xThetas[j] <= XjL) u.xThetas[j] = 2 * XjL + u.xThetas[j];
-                    if (u.xThetas[j] > XjU) u.xThetas[j] = 2 * XjU + u.xThetas[j];
+                    u.xThetas.push_back(populationCurrGen[r3].xThetas[j] + F * (populationCurrGen[r1].xThetas[j] - populationCurrGen[r2].xThetas[j])); // Ali je tu xb,j v psevdokodi mišljen x best?
+                    if (u.xThetas[j] <= XjL) u.xThetas[j] = 2 * XjU + u.xThetas[j];
+                    if (u.xThetas[j] > XjU) u.xThetas[j] = 2 * XjL + u.xThetas[j];
                 }
                 else u.xThetas.push_back(populationCurrGen[i].xThetas[j]);
             }
             // then go through for all betas
             for (int j = 0; j < aminoacids.size() - 3; j++) { // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
                 if (((float)rand() / (RAND_MAX + 1) + (rand() % 1)) < Cr || j == jRand) {
-                    u.xBetas.push_back(populationCurrGen[rBest].xBetas[j] + F * (populationCurrGen[r1].xBetas[j] - populationCurrGen[r2].xBetas[j]));
-                    if (u.xBetas[j] <= XjL) u.xBetas[j] = 2 * XjL + u.xBetas[j];
-                    if (u.xBetas[j] > XjU) u.xBetas[j] = 2 * XjU + u.xBetas[j];
+                    u.xBetas.push_back(populationCurrGen[r3].xBetas[j] + F * (populationCurrGen[r1].xBetas[j] - populationCurrGen[r2].xBetas[j]));
+                    if (u.xBetas[j] <= XjL) u.xBetas[j] = 2 * XjU + u.xBetas[j];
+                    if (u.xBetas[j] > XjU) u.xBetas[j] = 2 * XjL + u.xBetas[j];
                 }
                 else u.xBetas.push_back(populationCurrGen[i].xBetas[j]);
             }
             u.energy = energyCalculation(aminoacids, u);
             nfesCounter++;
 
-            if (u.energy < populationCurrGen[i].energy) populationCurrGen[i] = u;
+            if (u.energy <= populationCurrGen[i].energy) {
+                uNew = Solution();
+                for (int j = 0; j < aminoacids.size() - 2; j++) { // -------------------------------------------------------------- možno, da D ni pravilen, mozno tud da implementacija ni pravilna in da bi moral implementirat  --------------------------------------------------------------
+                    uNew.xThetas.push_back(populationCurrGen[r3].xThetas[j] + 0.5f * (u.xThetas[j] - populationCurrGen[i].xThetas[j]));
+                    if (uNew.xThetas[j] <= XjL) uNew.xThetas[j] = 2 * XjU + uNew.xThetas[j];
+                    if (uNew.xThetas[j] > XjU) uNew.xThetas[j] = 2 * XjL + uNew.xThetas[j];
+                }
+                // then go through for all betas
+                for (int j = 0; j < aminoacids.size() - 3; j++) { // -------------------------------------------------------------- možno, da D ni pravilen --------------------------------------------------------------
+                    uNew.xBetas.push_back(populationCurrGen[r3].xBetas[j] + 0.5f * (u.xBetas[j] - populationCurrGen[i].xBetas[j]));
+                    if (uNew.xBetas[j] <= XjL) uNew.xBetas[j] = 2 * XjU + uNew.xBetas[j];
+                    if (uNew.xBetas[j] > XjU) uNew.xBetas[j] = 2 * XjL + uNew.xBetas[j];
+                }
+
+                uNew.energy = energyCalculation(aminoacids, uNew);
+                nfesCounter++;
+
+                if (uNew.energy <= u.energy) {
+                    populationCurrGen[i].xThetas = uNew.xThetas;
+                    populationCurrGen[i].xBetas = uNew.xBetas;
+                    populationCurrGen[i].energy = uNew.energy;
+                    populationCurrGen[i].Cr = Cr;
+                    populationCurrGen[i].F = 0.5f;
+                } else {
+                    populationCurrGen[i].xThetas = u.xThetas;
+                    populationCurrGen[i].xBetas = u.xBetas;
+                    populationCurrGen[i].energy = u.energy;
+                    populationCurrGen[i].Cr = Cr;
+                    populationCurrGen[i].F = F;
+                }
+            }
         }
     }
     auto end = std::chrono::high_resolution_clock::now();
